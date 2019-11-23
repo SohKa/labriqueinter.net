@@ -67,6 +67,9 @@ function show_usage() {
   echo -e "     Install an encrypted file system" >&2
   echo -e "     \e[2mCan be automatically enabled, based on the image filename\e[0m" >&2
   echo -e "     \e[2mDefault: Clear file system\e[0m" >&2
+  echo -e "  \e[1m-o\e[0m" >&2
+  echo -e "     Disable the setting up of the WiFi hotspot" >&2
+  echo -e "     \e[2mDefault: set up the WiFi hotspot\e[0m" >&2
   echo -e "  \e[1m-2\e[0m" >&2
   echo -e "     Install an image for LIME2" >&2
   echo -e "     \e[2mCan be automatically enabled, based on the image filename\e[0m" >&2
@@ -549,6 +552,14 @@ function copy_custom_script() {
   sudo sync
 }
 
+function disable_hotspot_settingup() {
+  debug "Create no_hotspot marker file to ${olinux_mountpoint}/var/log/hypercube/no_hotspot"
+  sudo install -m 444 -o root -g root "/dev/null" "${olinux_mountpoint}/var/log/hypercube/no_hotspot"
+
+  debug "Flushing file system buffers"
+  sudo sync
+} 
+
 
 ######################
 ### CORE FUNCTIONS ###
@@ -730,6 +741,7 @@ opt_encryptedfs=false
 opt_findcubes=false
 opt_debug=false
 opt_lime2=false
+opt_nohotspot=false
 tmp_dir=$(mktemp -dp . .install-sd.sh_tmpXXXXXX)
 olinux_mountpoint="${tmp_dir}/olinux_mountpoint"
 files_path="${tmp_dir}/files"
@@ -744,7 +756,7 @@ loopdev=
 trap cleaning_exit EXIT ERR
 trap cleaning_ctrlc INT
 
-while getopts "s:f:g:mc:y:w:e2ldh" opt; do
+while getopts "s:f:g:mc:y:w:eo2ldh" opt; do
   case $opt in
     s) opt_sdcardpath=$OPTARG ;;
     f) opt_imgpath=$OPTARG ;;
@@ -753,6 +765,7 @@ while getopts "s:f:g:mc:y:w:e2ldh" opt; do
     w) opt_hypercubeshpath=$OPTARG ;;
     c) opt_customscriptpath=$OPTARG ;;
     e) opt_encryptedfs=true ;;
+    o) opt_nohotspot=true ;;
     2) opt_lime2=true ;;
     l) opt_findcubes=true ;;
     d) opt_debug=true ;;
@@ -841,6 +854,11 @@ fi
 if [ ! -z "${custom_script_path}" ]; then
   info "Copying custom script"
   copy_custom_script
+fi
+
+if $opt_nohotspot; then
+  info "Disabling the setting up of the WiFi hotspot"
+  disable_hotspot_settingup
 fi
 
 info "Done"
